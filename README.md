@@ -51,7 +51,7 @@ renderer, include the same `replace` directives in your application's `go.mod`
 
 ```go
 replace charm.land/bubbletea/v2 => github.com/neomantra/bubbletea/v2 v2.0.0-20261020122444-536722b0bdb6
-replace github.com/srwiley/rasterx => github.com/neomantra/rasterx v0.1.0
+replace github.com/srwiley/rasterx => github.com/neomantra/rasterx v0.1.1
 ```
 
 ## Quick start

@@ -41,7 +41,8 @@ jobs:
         if: matrix.go == '1.26.8'
         run: |
           task vet
-          task test
+          task test-no-cgo
+          task test-race
           task build
           task test-wasm
       - name: Run full CI

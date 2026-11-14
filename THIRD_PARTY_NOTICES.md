@@ -298,7 +298,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## github.com/lrstanley/bubblezone/v2 v2.0.0
+## github.com/lrstanley/bubblezone/v2 v2.0.1
 
 ```
 MIT License
@@ -414,7 +414,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## github.com/neomantra/rasterx v0.1.0 (replaces github.com/srwiley/rasterx)
+## github.com/neomantra/rasterx v0.1.1 (replaces github.com/srwiley/rasterx)
 
 ```
 BSD 3-Clause License

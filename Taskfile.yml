@@ -3,12 +3,10 @@ version: '3'
 
 env:
   GOWORK: 'off'
-  CGO_ENABLED: '0'
   GIT_PAGER: 'cat'
 
 vars:
   EXE: '{{if eq OS "windows"}}.exe{{end}}'
-  RACE: '{{if eq OS "darwin"}}-race{{else if eq OS "linux"}}-race{{end}}'
   WASM_PKGS: . ./editor ./ngmcp
   DEMOS: editor subgraphs mcp
   GOLANGCI_LINT: github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
@@ -84,13 +82,17 @@ tasks:
       - go -C examples run {{.GOVULNCHECK}} ./...
 
   build:
-    desc: Build all library packages and native demo binaries
+    desc: Build all library packages and native demo binaries (CGO_ENABLED=0)
+    env:
+      CGO_ENABLED: '0'
     cmds:
       - go build -mod=readonly ./...
       - task: build-examples
 
   build-examples:
-    desc: Build standalone native demo binaries into bin/
+    desc: Build standalone native demo binaries into bin/ (CGO_ENABLED=0)
+    env:
+      CGO_ENABLED: '0'
     cmds:
       - mkdir -p bin
       - for: { var: DEMOS }
@@ -124,20 +126,39 @@ tasks:
       - cp dist/demo.gif docs/media/demo.gif
 
   vet:
-    desc: Run go vet on library and examples
+    desc: Run go vet on library and examples (CGO_ENABLED=0)
+    env:
+      CGO_ENABLED: '0'
     cmds:
       - go vet -mod=readonly ./...
       - go -C examples vet -mod=readonly ./...
 
   test:
-    desc: Run the test suite under the race detector
+    desc: Run pure-Go (CGO_ENABLED=0) and race-detector test suites
     cmds:
-      - go test -mod=readonly {{.RACE}} -count=1 {{.CLI_ARGS}} ./...
-      - go -C examples test -mod=readonly {{.RACE}} -count=1 ./...
+      - task: test-no-cgo
+      - task: test-race
+
+  test-no-cgo:
+    desc: Run the test suite with CGO_ENABLED=0
+    env:
+      CGO_ENABLED: '0'
+    cmds:
+      - go test -mod=readonly -count=1 {{.CLI_ARGS}} ./...
+      - go -C examples test -mod=readonly -count=1 ./...
+
+  test-race:
+    desc: Run the test suite under the race detector (CGO_ENABLED=1)
+    env:
+      CGO_ENABLED: '1'
+    cmds:
+      - go test -mod=readonly -race -count=1 {{.CLI_ARGS}} ./...
+      - go -C examples test -mod=readonly -race -count=1 ./...
 
   wasm:
     desc: Compile and vet library and examples for js/wasm
     env:
+      CGO_ENABLED: '0'
       GOOS: js
       GOARCH: wasm
     cmds:
@@ -148,6 +169,7 @@ tasks:
   test-wasm:
     desc: Run ntnodegraph, editor, ngmcp, and example tests under Node js/wasm
     env:
+      CGO_ENABLED: '0'
       GOOS: js
       GOARCH: wasm
     cmds:
@@ -157,6 +179,7 @@ tasks:
   build-wasm:
     desc: Build browser WASM demo binaries into web/demos/
     env:
+      CGO_ENABLED: '0'
       GOOS: js
       GOARCH: wasm
     cmds:
@@ -214,6 +237,7 @@ tasks:
         ./ngmcp:FuzzHandleJSON
         ./ngmcp:FuzzDecodePatchOps
     env:
+      CGO_ENABLED: '0'
       NTNODEGRAPH_FUZZ_DURATION: '{{.DURATION}}'
     cmds:
       - for: { var: TARGETS }

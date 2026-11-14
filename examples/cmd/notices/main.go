@@ -49,8 +49,12 @@ func run() error {
 		env  []string
 		pkgs []string
 	}{
-		{repoRoot, []string{"GOWORK=off", "CGO_ENABLED=0"}, []string{"./..."}},
-		{filepath.Join(repoRoot, "examples"), []string{"GOWORK=off", "CGO_ENABLED=0"}, []string{"./editor", "./subgraphs", "./mcp"}},
+		{repoRoot, []string{"GOWORK=off", "CGO_ENABLED=0", "GOOS=linux", "GOARCH=amd64"}, []string{"./..."}},
+		{repoRoot, []string{"GOWORK=off", "CGO_ENABLED=0", "GOOS=darwin", "GOARCH=arm64"}, []string{"./..."}},
+		{repoRoot, []string{"GOWORK=off", "CGO_ENABLED=0", "GOOS=windows", "GOARCH=amd64"}, []string{"./..."}},
+		{filepath.Join(repoRoot, "examples"), []string{"GOWORK=off", "CGO_ENABLED=0", "GOOS=linux", "GOARCH=amd64"}, []string{"./editor", "./subgraphs", "./mcp"}},
+		{filepath.Join(repoRoot, "examples"), []string{"GOWORK=off", "CGO_ENABLED=0", "GOOS=darwin", "GOARCH=arm64"}, []string{"./editor", "./subgraphs", "./mcp"}},
+		{filepath.Join(repoRoot, "examples"), []string{"GOWORK=off", "CGO_ENABLED=0", "GOOS=windows", "GOARCH=amd64"}, []string{"./editor", "./subgraphs", "./mcp"}},
 		{filepath.Join(repoRoot, "examples"), []string{"GOWORK=off", "CGO_ENABLED=0", "GOOS=js", "GOARCH=wasm"}, []string{"./editor", "./subgraphs", "./mcp"}},
 	} {
 		args := append([]string{
