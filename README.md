@@ -31,7 +31,11 @@ identically in native terminals and `GOOS=js GOARCH=wasm` browser sessions.
 which uses it as the declarative specification, visual Studio canvas, and MCP
 authoring core for push-based media, WebGPU, WASI, and `agent/*` LLM pipelines.
 
-[Changelog](./CHANGELOG.md) · [Architecture & Invariants](./AGENTS.md)
+[**Try the interactive browser demos →**](https://nimbleterminal.github.io/ntnodegraph/) · [Changelog](./CHANGELOG.md) · [Architecture & Invariants](./AGENTS.md)
+
+<p>
+  <a href="https://nimbleterminal.github.io/ntnodegraph/"><img src="docs/media/demo.gif" alt="Interactive terminal node-graph editor showing composable graph/* components, inline Kitty previews, component drill-in, and Vector/Grid modes" width="840"></a>
+</p>
 
 ## Install
 
@@ -137,14 +141,15 @@ import (
 	"nimbleterminal.dev/ntnodegraph/ngmcp"
 )
 
-store := ngmcp.NewMemoryStore()
-_ = store.Put("demo", spec)
+store := ngmcp.NewMemoryStore("demo", map[string]*ntnodegraph.Spec{
+	"demo": spec,
+})
 
 srv := ngmcp.NewServer(ngmcp.Options{
 	Registry: reg,
 	Store:    store,
 })
-// Call srv.HandleJSON(ctx, rawRequest) or srv.ServeStream(ctx, in, out) over stdio/IPC.
+// Call srv.HandleJSON(ctx, rawRequest) or srv.ServeStdio(ctx, in, out) over stdio/IPC.
 ```
 
 ## Core design
@@ -177,19 +182,37 @@ srv := ngmcp.NewServer(ngmcp.Options{
 | `nimbleterminal.dev/ntnodegraph/editor` | Bubble Tea v2 visual node-and-wire canvas (`RenderVector` Kitty/half-block + `RenderGrid` `ntcanvas`), pan/zoom, port wiring, collapsible inline parameter and live preview drawers, undo/redo, group-to-subgraph promotion (`G`), and breadcrumb component drill-in (`Enter` / `Backspace`). |
 | `nimbleterminal.dev/ntnodegraph/ngmcp` | Concurrency-safe, zero-I/O MCP JSON-RPC 2.0 authoring server (`list`, `read`, `validate`, `edit`, `component`, `catalog://ntnodegraph/library`) and `DocumentStore` interface (`MemoryStore` included). |
 
+## Examples
+
+Run the standalone examples natively in your terminal, or serve all of them in
+the browser via [`booba`](https://github.com/NimbleTerminal/booba) and
+`ntwebterm` (with OSC 7501 touch/action bars):
+
+```sh
+task run-editor               # visual graph editor (Vector Kitty/half-block + Grid toggle)
+task run-editor -- -mode=grid # start directly in Unicode ntcanvas cell-grid mode
+task run-subgraphs            # composable graph/* library, Enter drill-in, G promotion & Flatten()
+task run-mcp                  # split-pane live ngmcp JSON-RPC 2.0 co-editing + canonical YAML
+task serve-wasm-site          # browser showcase at http://127.0.0.1:8000/web/
+```
+
+See [examples/README.md](./examples/README.md). Examples live in a separate Go
+module so browser dependencies stay outside the core library.
+
 ## Open Collaboration
 
 Run `task ci` before submitting changes. It checks Go formatting, module
 tidiness, dependency checksums, `golangci-lint`, `go vet`, race-enabled unit
-tests, `GOOS=js GOARCH=wasm` builds and Node execution tests, and bounded
-fuzzing across all eight fuzz targets. It requires Go 1.26.8+, a C compiler for
-the race detector, [Task](https://taskfile.dev), and Node.js (for `go_js_wasm_exec`).
+tests, `GOOS=js GOARCH=wasm` builds and Node execution tests, headless browser
+demo smoke checks, third-party notices, and bounded fuzzing across all eight
+fuzz targets. It requires Go 1.26.8+, a C compiler for the race detector,
+[Task](https://taskfile.dev), and Node.js.
 
 ```sh
-task check              # vet, -race unit tests, and js/wasm build + Node tests
-task lint               # golangci-lint across all packages
-task fuzz               # 8 fuzz targets, 5s each (override with DURATION=30s)
-DURATION=1s task ci     # full preflight with quick fuzz smoke pass
+task check              # vet, -race tests, js/wasm tests, site smoke checks & notices
+task lint               # golangci-lint across library and examples
+task fuzz               # 8 fuzz targets, 2s each (override with DURATION=30s)
+task ci                 # full CI preflight matching GitHub Actions
 ```
 
 Contributions and feedback are welcome. Please follow our
@@ -204,14 +227,16 @@ Extracted from [Nebula](https://github.com/NimbleTerminal/nebula). Built on
 [Charm](https://charm.land)'s Bubble Tea and Lip Gloss, Steven R. Wiley's
 [`rasterx`](https://github.com/srwiley/rasterx),
 [`ntcanvas`](https://github.com/NimbleTerminal/ntcanvas),
-[`ntpicture`](https://github.com/NimbleTerminal/ntpicture), and
-[`ntfonts`](https://github.com/NimbleTerminal/ntfonts), with
+[`ntpicture`](https://github.com/NimbleTerminal/ntpicture),
+[`ntfonts`](https://github.com/NimbleTerminal/ntfonts), and
+[`booba`](https://github.com/NimbleTerminal/booba), with
 [Kitty](https://sw.kovidgoyal.net/kitty/) and [Ghostty](https://ghostty.org)
 graphics support.
 
 ## License
 
-[MIT License](./LICENSE).
+[MIT License](./LICENSE). Dependency and browser runtime licenses are in
+[THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
 
 Copyright (c) 2026 [Neomantra Corp](https://www.neomantra.com).
 

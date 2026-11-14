@@ -18,18 +18,25 @@ Project rules and architectural invariants for agents and humans working on
    runtimes inject their constraints via `BackendProfile` and `DocumentStore`.
    `TestExtractionBoundaries`, `TestEditorExtractionBoundaries`, and
    `TestNgmcpExtractionBoundaries` enforce these boundaries at test time.
-3. **MIT licensing.**
-   Every Go file in `ntnodegraph` is MIT-licensed (`LICENSE`) and must carry
-   `// SPDX-License-Identifier: MIT`.
-4. **Bounded inputs and strict codecs.**
+3. **MIT licensing and third-party notices.**
+   Every Go file in `ntnodegraph` and `examples/` is MIT-licensed (`LICENSE`)
+   and must carry `// SPDX-License-Identifier: MIT`. Run `task notices` whenever
+   dependencies or browser runtime assets change; `task check` verifies
+   `THIRD_PARTY_NOTICES.md` is up to date.
+4. **Separate `examples/` module.**
+   Interactive terminal/browser demos (`examples/editor`, `examples/subgraphs`,
+   `examples/mcp`) live in `examples/go.mod` so CLI flags and `booba` browser
+   assets never pollute `nimbleterminal.dev/ntnodegraph`'s module graph.
+5. **Bounded inputs and strict codecs.**
    Parsers enforce bounded bytes, node counts, edge counts, group counts, and
    nesting depth (`ParseLimits`) and reject unknown fields, YAML aliases,
    multi-document streams, non-finite numbers, and duplicate JSON keys.
-5. **Pure Go & WASM portability.**
-   `ntnodegraph` builds and tests with `GOWORK=off` and `CGO_ENABLED=0`, and
-   must pass both native `-race` tests and `GOOS=js GOARCH=wasm` compile and
-   Node execution gates (`task check`).
-6. **Deterministic iteration and diff-stable output.**
+6. **Pure Go & WASM portability.**
+   `ntnodegraph` and `examples/` build and test with `GOWORK=off` and
+   `CGO_ENABLED=0`, and must pass native `-race` tests, `GOOS=js GOARCH=wasm`
+   Node execution tests, and headless `booba` + `ntwebterm` browser demo smoke
+   checks (`task ci`).
+7. **Deterministic iteration and diff-stable output.**
    Never rely on Go map iteration order in serialization, validation error
    reporting, topological sorting, component synthesis, or structural diffing.
    Canonical YAML and JSON outputs must remain byte-for-byte deterministic so

@@ -2,8 +2,6 @@ module nimbleterminal.dev/ntnodegraph
 
 go 1.26.8
 
-toolchain go1.27.4
-
 require (
 	charm.land/bubbletea/v2 v2.1.1
 	charm.land/lipgloss/v2 v2.1.0

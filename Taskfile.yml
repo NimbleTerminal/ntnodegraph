@@ -7,16 +7,18 @@ env:
   GIT_PAGER: 'cat'
 
 vars:
+  EXE: '{{if eq OS "windows"}}.exe{{end}}'
   RACE: '{{if eq OS "darwin"}}-race{{else if eq OS "linux"}}-race{{end}}'
   WASM_PKGS: . ./editor ./ngmcp
+  DEMOS: editor subgraphs mcp
   GOLANGCI_LINT: github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
   GOVULNCHECK: golang.org/x/vuln/cmd/govulncheck@v1.9.0
 
 tasks:
   default:
-    desc: Build and verify all packages
+    desc: Build library and native demos
     cmds:
-      - task: check
+      - task: build
 
   list:
     desc: List available tasks
@@ -24,7 +26,7 @@ tasks:
       - task --list-all
 
   ci:
-    desc: Run formatting, module, lint, vet, race test, WASM, build, and fuzz gates
+    desc: Run formatting, module, lint, vet, race test, WASM site, notices, build, and fuzz gates
     cmds:
       - task: fmt-check
       - task: go-tidy-check
@@ -35,12 +37,12 @@ tasks:
       - task: fuzz
 
   fmt:
-    desc: Format Go source
+    desc: Format Go source in library and examples
     cmds:
-      - go fmt ./...
+      - gofmt -w .
 
   fmt-check:
-    desc: Check Go formatting without changing files
+    desc: Check Go formatting and whitespace without changing files
     cmds:
       - |
         set -eu
@@ -49,68 +51,159 @@ tasks:
           printf '%s\n' "$files"
           exit 1
         fi
+      - git --no-pager diff --check
 
   go-tidy:
-    desc: Tidy Go module dependencies
+    desc: Tidy Go module dependencies in library and examples
     cmds:
       - go mod tidy
+      - go -C examples mod tidy
 
   go-tidy-check:
     desc: Check dependency files without changing them
     cmds:
       - go mod tidy -diff
+      - go -C examples mod tidy -diff
 
   go-verify:
     desc: Verify downloaded dependencies
     cmds:
       - go mod verify
+      - go -C examples mod verify
 
   lint:
-    desc: Run golangci-lint (.golangci.yml)
+    desc: Run golangci-lint (.golangci.yml) on library and examples
     cmds:
       - go run {{.GOLANGCI_LINT}} run ./...
+      - go -C examples run {{.GOLANGCI_LINT}} run --config ../.golangci.yml ./...
 
   vuln:
-    desc: Check module against the Go vulnerability database (needs network)
+    desc: Check modules against the Go vulnerability database (needs network)
     cmds:
       - go run {{.GOVULNCHECK}} ./...
+      - go -C examples run {{.GOVULNCHECK}} ./...
 
   build:
-    desc: Build all packages
+    desc: Build all library packages and native demo binaries
     cmds:
       - go build -mod=readonly ./...
+      - task: build-examples
+
+  build-examples:
+    desc: Build standalone native demo binaries into bin/
+    cmds:
+      - mkdir -p bin
+      - for: { var: DEMOS }
+        cmd: go -C examples build -mod=readonly -o ../bin/ntnodegraph-{{.ITEM}}{{.EXE}} ./{{.ITEM}}
+
+  run-editor:
+    desc: Run the interactive Visual Graph Editor demo
+    cmds:
+      - go -C examples run -mod=readonly ./editor {{.CLI_ARGS}}
+
+  run-subgraphs:
+    desc: Run the Composable Subgraphs & Component Library demo
+    cmds:
+      - go -C examples run -mod=readonly ./subgraphs {{.CLI_ARGS}}
+
+  run-mcp:
+    desc: Run the Live MCP Co-Editing & Canonical YAML demo
+    cmds:
+      - go -C examples run -mod=readonly ./mcp {{.CLI_ARGS}}
+
+  record-demo:
+    desc: Record examples/demo.tape and refresh docs/media/demo.gif with ntrecord
+    preconditions:
+      - sh: command -v ntrecord
+        msg: Install ntrecord (brew install --cask nimbleterminal/tap/ntrecord).
+    cmds:
+      - task: build-examples
+      - mkdir -p dist docs/media
+      - ntrecord validate examples/demo.tape
+      - ntrecord examples/demo.tape
+      - cp dist/demo.gif docs/media/demo.gif
 
   vet:
-    desc: Run go vet
+    desc: Run go vet on library and examples
     cmds:
       - go vet -mod=readonly ./...
+      - go -C examples vet -mod=readonly ./...
 
   test:
     desc: Run the test suite under the race detector
     cmds:
-      - go test {{.RACE}} -count=1 {{.CLI_ARGS}} ./...
+      - go test -mod=readonly {{.RACE}} -count=1 {{.CLI_ARGS}} ./...
+      - go -C examples test -mod=readonly {{.RACE}} -count=1 ./...
 
   wasm:
-    desc: Compile and vet all packages for js/wasm
+    desc: Compile and vet library and examples for js/wasm
     env:
       GOOS: js
       GOARCH: wasm
     cmds:
       - go vet -mod=readonly {{.WASM_PKGS}}
       - go build {{.WASM_PKGS}}
+      - go -C examples vet -mod=readonly ./editor ./subgraphs ./mcp
 
   test-wasm:
-    desc: Run ntnodegraph, editor, and ngmcp tests under Node js/wasm
+    desc: Run ntnodegraph, editor, ngmcp, and example tests under Node js/wasm
     env:
       GOOS: js
       GOARCH: wasm
     cmds:
       - 'go test -mod=readonly -count=1 -exec="$(go env GOROOT)/lib/wasm/go_js_wasm_exec" . ./editor ./ngmcp'
+      - 'go -C examples test -mod=readonly -count=1 -exec="$(go env GOROOT)/lib/wasm/go_js_wasm_exec" .'
+
+  build-wasm:
+    desc: Build browser WASM demo binaries into web/demos/
+    env:
+      GOOS: js
+      GOARCH: wasm
+    cmds:
+      - mkdir -p web/demos
+      - for: { var: DEMOS }
+        cmd: go -C examples build -mod=readonly -o ../web/demos/{{.ITEM}}.wasm ./{{.ITEM}}
+
+  build-wasm-site:
+    desc: Build browser WASM demos, export booba/ntwebterm assets, and run site smoke checks
+    cmds:
+      - task: build-wasm
+      - go -C examples tool booba-assets --no-index ../web
+      - cp LICENSE THIRD_PARTY_NOTICES.md web/
+      - task: check-site
+
+  check-site:
+    desc: Validate browser JavaScript syntax, site assets, and headless WASM demo sessions
+    cmds:
+      - node --check web/site.js
+      - node scripts/check-site.mjs
+      - node scripts/smoke-demo.mjs editor
+      - node scripts/smoke-demo.mjs editor grid
+      - node scripts/smoke-demo.mjs subgraphs
+      - node scripts/smoke-demo.mjs mcp
+
+  serve-wasm-site:
+    desc: Build and serve interactive browser demos at http://127.0.0.1:8000/web/
+    cmds:
+      - task: build-wasm-site
+      - python3 -m http.server 8000 --bind 127.0.0.1
+
+  notices:
+    desc: Regenerate THIRD_PARTY_NOTICES.md from library, demo, and browser runtime dependencies
+    cmds:
+      - go -C examples run ./cmd/notices > THIRD_PARTY_NOTICES.md
+
+  notices-check:
+    desc: Check generated notices without modifying tracked files
+    cmds:
+      - mkdir -p dist
+      - go -C examples run ./cmd/notices > dist/THIRD_PARTY_NOTICES.md
+      - cmp THIRD_PARTY_NOTICES.md dist/THIRD_PARTY_NOTICES.md
 
   fuzz:
-    desc: 'Fuzz untrusted spec, type, editor, and MCP parsers, DURATION each (default 5s)'
+    desc: 'Fuzz untrusted spec, type, editor, and MCP parsers, DURATION each (default 2s)'
     vars:
-      DURATION: '{{default "5s" .DURATION}}'
+      DURATION: '{{default "2s" .DURATION}}'
       TARGETS: >-
         .:FuzzParseYAML
         .:FuzzParseJSON
@@ -127,14 +220,16 @@ tasks:
         cmd: go test -mod=readonly -run='^$' -fuzz='^{{index (splitList ":" .ITEM) 1}}$' -fuzztime="$NTNODEGRAPH_FUZZ_DURATION" -parallel=2 {{index (splitList ":" .ITEM) 0}}
 
   check:
-    desc: Vet, race tests, and WASM compile + Node execution gates
+    desc: Vet, race tests, WASM compile & Node execution gates, browser site smoke tests, and dependency notices
     cmds:
       - task: vet
       - task: test
       - task: wasm
       - task: test-wasm
+      - task: build-wasm-site
+      - task: notices-check
 
   clean:
-    desc: Remove generated test and build artifacts
+    desc: Remove generated binaries, dist artifacts, and exported browser runtime assets
     cmds:
-      - rm -rf bin dist
+      - rm -rf bin dist .task web/demos web/booba web/ghostty-web web/ntwebterm web/wasm_exec.js web/LICENSE web/THIRD_PARTY_NOTICES.md

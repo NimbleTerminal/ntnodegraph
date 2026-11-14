@@ -1,6 +1,14 @@
 bin/
 dist/
+.task/
 .DS_Store
 *.test
 *.out
 *.wasm
+web/demos/
+web/booba/
+web/ghostty-web/
+web/ntwebterm/
+web/wasm_exec.js
+web/LICENSE
+web/THIRD_PARTY_NOTICES.md

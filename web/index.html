@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ntnodegraph · Declarative Node Graphs &amp; Visual Editor for Bubble Tea</title>
+  <link rel="stylesheet" href="site.css?v=1">
+</head>
+<body>
+  <header>
+    <a class="brand" href="./">ntnodegraph<span>Declarative node graphs, visual Bubble Tea v2 editor &amp; MCP authoring.</span></a>
+    <a href="https://github.com/NimbleTerminal/ntnodegraph">Source ↗</a>
+  </header>
+  <main>
+    <nav aria-label="Examples">
+      <a href="?demo=editor" data-demo="editor">
+        <strong>Visual Graph Editor</strong>
+        <span>Antialiased rasterx + ntpicture canvas, agent/* cold-inlet feedback, inline parameter drawers, and RGBA card previews.</span>
+      </a>
+      <a href="?demo=editor&amp;mode=grid" data-demo="grid">
+        <strong>Unicode Cell-Grid Canvas</strong>
+        <span>Pure ntcanvas.GraphemeGrid box-drawing cards, orthogonal wire routing, and interactive port snapping anywhere.</span>
+      </a>
+      <a href="?demo=subgraphs" data-demo="subgraphs">
+        <strong>Composable Subgraphs (graph/*)</strong>
+        <span>Reusable component libraries, Enter/Backspace breadcrumb drill-in, G group promotion, and live Flatten() roll-up.</span>
+      </a>
+      <a href="?demo=mcp" data-demo="mcp">
+        <strong>Live MCP Co-Editing &amp; YAML</strong>
+        <span>Split-pane editor + real ngmcp JSON-RPC 2.0 patch tools (edit, component, validate) with diff-stable canonical YAML.</span>
+      </a>
+    </nav>
+    <section class="demo" aria-label="Live terminal example">
+      <div class="toolbar">
+        <h1 id="title">Visual Graph Editor</h1>
+        <span><a id="source" href="https://github.com/NimbleTerminal/ntnodegraph/tree/main/examples/editor">Example source ↗</a> · <a id="restart" href="?demo=editor">Restart ↻</a></span>
+      </div>
+      <div id="controls" role="group" aria-label="Terminal controls"></div>
+      <div class="terminal-frame"><div id="terminal"></div></div>
+      <p id="status" role="status">Starting terminal…</p>
+      <p id="help">Click the terminal to focus. Drag nodes or ports · v: Vector/Grid · w: inline params · O: card previews · q: quit.</p>
+    </section>
+  </main>
+  <footer>
+    <span>Powered by <a href="https://github.com/NimbleTerminal/booba">booba</a> and <a href="https://github.com/NimbleTerminal/ntwebterm">ntwebterm</a>. <a href="LICENSE">Code license</a> · <a href="THIRD_PARTY_NOTICES.md">Dependency licenses</a></span>
+    <span class="credit">Made with ❤️🤖🔥 by <a href="https://nimbleterminal.dev">Nimble Terminal</a></span>
+  </footer>
+  <script src="wasm_exec.js"></script>
+  <script type="module" src="site.js"></script>
+</body>
+</html>
