@@ -1,0 +1,140 @@
+# ntnodegraph - Copyright (c) 2026 Neomantra Corp.
+version: '3'
+
+env:
+  GOWORK: 'off'
+  CGO_ENABLED: '0'
+  GIT_PAGER: 'cat'
+
+vars:
+  RACE: '{{if eq OS "darwin"}}-race{{else if eq OS "linux"}}-race{{end}}'
+  WASM_PKGS: . ./editor ./ngmcp
+  GOLANGCI_LINT: github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
+  GOVULNCHECK: golang.org/x/vuln/cmd/govulncheck@v1.9.0
+
+tasks:
+  default:
+    desc: Build and verify all packages
+    cmds:
+      - task: check
+
+  list:
+    desc: List available tasks
+    cmds:
+      - task --list-all
+
+  ci:
+    desc: Run formatting, module, lint, vet, race test, WASM, build, and fuzz gates
+    cmds:
+      - task: fmt-check
+      - task: go-tidy-check
+      - task: go-verify
+      - task: lint
+      - task: check
+      - task: build
+      - task: fuzz
+
+  fmt:
+    desc: Format Go source
+    cmds:
+      - go fmt ./...
+
+  fmt-check:
+    desc: Check Go formatting without changing files
+    cmds:
+      - |
+        set -eu
+        files=$(gofmt -l .)
+        if [ -n "$files" ]; then
+          printf '%s\n' "$files"
+          exit 1
+        fi
+
+  go-tidy:
+    desc: Tidy Go module dependencies
+    cmds:
+      - go mod tidy
+
+  go-tidy-check:
+    desc: Check dependency files without changing them
+    cmds:
+      - go mod tidy -diff
+
+  go-verify:
+    desc: Verify downloaded dependencies
+    cmds:
+      - go mod verify
+
+  lint:
+    desc: Run golangci-lint (.golangci.yml)
+    cmds:
+      - go run {{.GOLANGCI_LINT}} run ./...
+
+  vuln:
+    desc: Check module against the Go vulnerability database (needs network)
+    cmds:
+      - go run {{.GOVULNCHECK}} ./...
+
+  build:
+    desc: Build all packages
+    cmds:
+      - go build -mod=readonly ./...
+
+  vet:
+    desc: Run go vet
+    cmds:
+      - go vet -mod=readonly ./...
+
+  test:
+    desc: Run the test suite under the race detector
+    cmds:
+      - go test {{.RACE}} -count=1 {{.CLI_ARGS}} ./...
+
+  wasm:
+    desc: Compile and vet all packages for js/wasm
+    env:
+      GOOS: js
+      GOARCH: wasm
+    cmds:
+      - go vet -mod=readonly {{.WASM_PKGS}}
+      - go build {{.WASM_PKGS}}
+
+  test-wasm:
+    desc: Run ntnodegraph, editor, and ngmcp tests under Node js/wasm
+    env:
+      GOOS: js
+      GOARCH: wasm
+    cmds:
+      - 'go test -mod=readonly -count=1 -exec="$(go env GOROOT)/lib/wasm/go_js_wasm_exec" . ./editor ./ngmcp'
+
+  fuzz:
+    desc: 'Fuzz untrusted spec, type, editor, and MCP parsers, DURATION each (default 5s)'
+    vars:
+      DURATION: '{{default "5s" .DURATION}}'
+      TARGETS: >-
+        .:FuzzParseYAML
+        .:FuzzParseJSON
+        .:FuzzParseDataType
+        .:FuzzParseTypeID
+        .:FuzzSubgraphFlatten
+        ./editor:FuzzEditorInteractions
+        ./ngmcp:FuzzHandleJSON
+        ./ngmcp:FuzzDecodePatchOps
+    env:
+      NTNODEGRAPH_FUZZ_DURATION: '{{.DURATION}}'
+    cmds:
+      - for: { var: TARGETS }
+        cmd: go test -mod=readonly -run='^$' -fuzz='^{{index (splitList ":" .ITEM) 1}}$' -fuzztime="$NTNODEGRAPH_FUZZ_DURATION" -parallel=2 {{index (splitList ":" .ITEM) 0}}
+
+  check:
+    desc: Vet, race tests, and WASM compile + Node execution gates
+    cmds:
+      - task: vet
+      - task: test
+      - task: wasm
+      - task: test-wasm
+
+  clean:
+    desc: Remove generated test and build artifacts
+    cmds:
+      - rm -rf bin dist

@@ -1,0 +1,220 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nimbleterminal.dev/schemas/ntnodegraph/v1.schema.json",
+  "title": "ntnodegraph Specification v1",
+  "description": "Declarative node-graph topology, static parameters, capability declarations, subgraph boundary ports/parameters, and editor UI metadata. Contains no control flow or expressions.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "name", "nodes", "edges"],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Specification format version."
+    },
+    "name": {
+      "$ref": "#/$defs/identifier",
+      "description": "Graph identifier."
+    },
+    "component_version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Optional major version when registered as a reusable graph/<name>@<component_version> component (defaults to 1)."
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional human- or LLM-readable summary of the graph."
+    },
+    "inlets": {
+      "type": "array",
+      "description": "Boundary inlets for flatten-at-load reusable graph/ subgraphs.",
+      "items": { "$ref": "#/$defs/exposedInlet" }
+    },
+    "outlets": {
+      "type": "array",
+      "description": "Boundary outlets for flatten-at-load reusable graph/ subgraphs.",
+      "items": { "$ref": "#/$defs/exposedOutlet" }
+    },
+    "params": {
+      "type": "array",
+      "description": "Boundary static parameters forwarded 1:1 onto internal node parameters when instantiated as a graph/ subgraph.",
+      "items": { "$ref": "#/$defs/exposedParam" }
+    },
+    "groups": {
+      "type": "object",
+      "description": "Editor-only visual node groupings; ignored by execution backends.",
+      "propertyNames": { "$ref": "#/$defs/identifier" },
+      "additionalProperties": { "$ref": "#/$defs/group" }
+    },
+    "nodes": {
+      "type": "object",
+      "description": "Map of node instance IDs to node declarations.",
+      "propertyNames": { "$ref": "#/$defs/identifier" },
+      "additionalProperties": { "$ref": "#/$defs/node" }
+    },
+    "edges": {
+      "type": "array",
+      "description": "Directed port-to-port connections from an outlet to an inlet.",
+      "items": { "$ref": "#/$defs/edge" }
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
+    },
+    "typeId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]{0,63}/[a-z0-9]([a-z0-9._-]{0,126}[a-z0-9])?@[1-9][0-9]*$",
+      "not": { "pattern": "\\.\\." },
+      "description": "Versioned node type identifier in namespace/name@major form."
+    },
+    "portRef": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}\\.[A-Za-z0-9][A-Za-z0-9_-]{0,127}$",
+      "description": "Node port or parameter reference in node.member form."
+    },
+    "dataType": {
+      "type": "string",
+      "pattern": "^(bytes|string|number|bool|json|any|(table|document|frame|texture|event)(<[a-z0-9]([a-z0-9_-]{0,62}[a-z0-9])?>)?)$",
+      "description": "Port static data type with optional specialization parameter."
+    },
+    "paramType": {
+      "type": "string",
+      "enum": ["string", "number", "int", "bool", "duration", "strings", "json"],
+      "description": "Static parameter schema type."
+    },
+    "capability": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "pattern": "^[a-z][a-z0-9_-]{0,63}(:[^\\s\u0000-\u001F\u007F-\u009F\u00A0]+)?$",
+      "description": "Host capability declaration in kind or kind:scope form."
+    },
+    "exposedInlet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "type"],
+      "properties": {
+        "name": { "$ref": "#/$defs/identifier" },
+        "type": { "$ref": "#/$defs/dataType" },
+        "target": { "$ref": "#/$defs/portRef" },
+        "targets": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/portRef" }
+        },
+        "required": { "type": "boolean" },
+        "description": { "type": "string" }
+      },
+      "oneOf": [
+        { "required": ["target"] },
+        { "required": ["targets"] }
+      ]
+    },
+    "exposedOutlet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "type", "target"],
+      "properties": {
+        "name": { "$ref": "#/$defs/identifier" },
+        "type": { "$ref": "#/$defs/dataType" },
+        "target": { "$ref": "#/$defs/portRef" },
+        "description": { "type": "string" }
+      }
+    },
+    "exposedParam": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "type"],
+      "properties": {
+        "name": { "$ref": "#/$defs/identifier" },
+        "type": { "$ref": "#/$defs/paramType" },
+        "target": { "$ref": "#/$defs/portRef" },
+        "targets": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/portRef" }
+        },
+        "required": { "type": "boolean" },
+        "default": {},
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "enum": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "description": { "type": "string" }
+      },
+      "oneOf": [
+        { "required": ["target"] },
+        { "required": ["targets"] }
+      ]
+    },
+    "group": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "label": { "type": "string" },
+        "nodes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/identifier" }
+        },
+        "collapsed": { "type": "boolean" },
+        "ui": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["x", "y"],
+          "properties": {
+            "x": { "type": "number" },
+            "y": { "type": "number" },
+            "width": { "type": "number", "minimum": 0 },
+            "height": { "type": "number", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "$ref": "#/$defs/typeId" },
+        "capabilities": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/capability" }
+        },
+        "params": {
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/identifier" }
+        },
+        "ui": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["x", "y"],
+          "properties": {
+            "x": { "type": "number" },
+            "y": { "type": "number" },
+            "label": { "type": "string" },
+            "collapsed": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to"],
+      "properties": {
+        "from": { "$ref": "#/$defs/portRef" },
+        "to": { "$ref": "#/$defs/portRef" },
+        "kind": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+        }
+      }
+    }
+  }
+}
