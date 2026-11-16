@@ -97,7 +97,7 @@ func NewServer(opts Options) *Server {
 		info.Name = "ntnodegraph-mcp"
 	}
 	if info.Version == "" {
-		info.Version = "1.0.0"
+		info.Version = defaultImplementationVersion
 	}
 	reg := opts.Registry
 	if reg == nil {

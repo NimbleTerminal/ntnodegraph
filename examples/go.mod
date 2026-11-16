@@ -8,7 +8,7 @@ require (
 	charm.land/lipgloss/v2 v2.1.0
 	github.com/charmbracelet/x/ansi v0.11.9
 	nimbleterminal.dev/booba v0.13.0
-	nimbleterminal.dev/ntnodegraph v0.1.0
+	nimbleterminal.dev/ntnodegraph v0.2.0
 )
 
 require (

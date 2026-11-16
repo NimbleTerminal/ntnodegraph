@@ -2,7 +2,11 @@
 
 All notable changes to `nimbleterminal.dev/ntnodegraph` are documented in this file.
 
-## Unreleased
+## [0.2.0] - Unreleased
+
+### Added
+
+- Parameterizable `scene` port types, including `scene<sdf>`, with editor styling.
 
 ### Changed
 
@@ -21,6 +25,8 @@ All notable changes to `nimbleterminal.dev/ntnodegraph` are documented in this f
 - Expanded CI fuzzing to eleven targets, adding parser/schema parity, structured
   extraction/flattening identity, and stateful revision checks. MCP patch fuzzing
   now checks input immutability, serialization round trips, and determinism.
+- Default MCP client/server implementation metadata now reports `0.2.0` instead
+  of the unrelated `1.0.0` placeholder. Hosts can still override their metadata.
 
 ## [0.1.0] - 2026-11-14
 

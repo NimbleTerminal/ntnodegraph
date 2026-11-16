@@ -265,6 +265,25 @@ ordinary `go test ./...` replays them without launching a fuzz campaign.
 Contributions and feedback are welcome. Please follow our
 [Code of Conduct](./CODE_OF_CONDUCT.md).
 
+## Release process
+
+The next release is **v0.2.0**, with breaking host integration changes described
+in the [changelog](./CHANGELOG.md) and the host integration contracts above.
+The document format remains spec version 1. Go 1.26.8 remains the minimum.
+
+Prepare releases on a branch and run `task ci`. Update the changelog,
+`examples/go.mod`, and the default MCP implementation version together. Regenerate
+notices with `task notices` whenever module requirements or browser assets change.
+The examples' local replacement keeps pre-release checks independent of a
+published module tag.
+
+Before publishing, require successful GitHub CI on Linux and macOS with both
+supported Go versions. Resolve downstream API migration needs, finalize the
+changelog date, and merge the release PR. Tag the exact verified commit with an
+annotated `vX.Y.Z` tag, then publish a GitHub release using the changelog entry.
+Do not move published tags. This library release needs no compiled binary assets;
+the separately built browser demos are deployed by the Pages workflow.
+
 - [Report an issue](https://github.com/NimbleTerminal/ntnodegraph/issues)
 - [Submit a pull request](https://github.com/NimbleTerminal/ntnodegraph/pulls)
 

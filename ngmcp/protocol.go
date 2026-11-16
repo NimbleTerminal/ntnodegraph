@@ -25,6 +25,10 @@ import (
 	"sync/atomic"
 )
 
+// defaultImplementationVersion tracks the library release, independently of the
+// MCP protocol version. Hosts may override it through ImplementationInfo.
+const defaultImplementationVersion = "0.2.0"
+
 // MCP protocol version and JSON-RPC 2.0 error codes.
 const (
 	ProtocolVersion        = "2025-06-18"
@@ -499,7 +503,7 @@ func (c *Client) Initialize(ctx context.Context, clientInfo ImplementationInfo) 
 		clientInfo.Name = "ngmcp-client"
 	}
 	if clientInfo.Version == "" {
-		clientInfo.Version = "1.0.0"
+		clientInfo.Version = defaultImplementationVersion
 	}
 	var res InitializeResult
 	err := c.Call(ctx, "initialize", InitializeParams{
