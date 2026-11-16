@@ -582,45 +582,6 @@ func SynthesizeTypeDef(comp *Spec, reg *Registry, opts ValidateOptions) (TypeDef
 	return def, nil
 }
 
-// SynthesizeExecutionHints derives hot-inlet and frame-bound execution metadata
-// for a component Spec from per-type lookup callbacks.
-func SynthesizeExecutionHints(
-	comp *Spec,
-	hotLookup func(TypeID) map[string]bool,
-	frameBoundLookup func(TypeID) bool,
-) (hotInlets map[string]bool, frameBound bool) {
-	if comp == nil {
-		return nil, false
-	}
-	if frameBoundLookup != nil {
-		for _, nid := range comp.SortedNodeIDs() {
-			if frameBoundLookup(comp.Nodes[nid].Type) {
-				frameBound = true
-				break
-			}
-		}
-	}
-	if hotLookup != nil && len(comp.Inlets) > 0 {
-		hotInlets = make(map[string]bool, len(comp.Inlets))
-		for _, ex := range comp.Inlets {
-			isHot := false
-			for _, t := range ex.ResolvedTargets() {
-				node, ok := comp.Nodes[t.Node]
-				if !ok {
-					continue
-				}
-				hm := hotLookup(node.Type)
-				if hm == nil || hm[t.Port] {
-					isHot = true
-					break
-				}
-			}
-			hotInlets[ex.Name] = isHot
-		}
-	}
-	return hotInlets, frameBound
-}
-
 func rollUpComponentCapabilities(
 	canon *Spec,
 	reg *Registry,

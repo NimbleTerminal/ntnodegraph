@@ -145,12 +145,18 @@ func convertJSONNumbers(v any) (any, error) {
 // ApplyPatchOps applies a batch of declarative PatchOps transactionally to spec,
 // returning a canonicalized copy while leaving the input spec untouched on error.
 func ApplyPatchOps(spec *nodegraph.Spec, ops []PatchOp, reg *nodegraph.Registry, layoutFn AutoLayoutFunc) (*nodegraph.Spec, error) {
+	return ApplyPatchOpsWithBackend(spec, ops, reg, layoutFn, nil)
+}
+
+// ApplyPatchOpsWithBackend uses the host compatibility policy for inferred wiring.
+// Callers still validate the resulting document before committing it.
+func ApplyPatchOpsWithBackend(spec *nodegraph.Spec, ops []PatchOp, reg *nodegraph.Registry, layoutFn AutoLayoutFunc, backend *nodegraph.BackendProfile) (*nodegraph.Spec, error) {
 	if spec == nil {
 		return nil, fmt.Errorf("%w: nil spec", nodegraph.ErrInvalidSpec)
 	}
 	working := spec.Clone()
 	for i, p := range ops {
-		next, err := applySinglePatch(working, p, reg, layoutFn)
+		next, err := applySinglePatch(working, p, reg, layoutFn, backend)
 		if err != nil {
 			return nil, fmt.Errorf("ops[%d] (%s): %w", i, p.Op, err)
 		}
@@ -159,7 +165,7 @@ func ApplyPatchOps(spec *nodegraph.Spec, ops []PatchOp, reg *nodegraph.Registry,
 	return working.Canonicalize(), nil
 }
 
-func applySinglePatch(spec *nodegraph.Spec, p PatchOp, reg *nodegraph.Registry, layoutFn AutoLayoutFunc) (*nodegraph.Spec, error) {
+func applySinglePatch(spec *nodegraph.Spec, p PatchOp, reg *nodegraph.Registry, layoutFn AutoLayoutFunc, backend *nodegraph.BackendProfile) (*nodegraph.Spec, error) {
 	opName := strings.ToLower(strings.TrimSpace(p.Op))
 	switch opName {
 	case "add_node":
@@ -278,7 +284,7 @@ func applySinglePatch(spec *nodegraph.Spec, p PatchOp, reg *nodegraph.Registry, 
 		return nodegraph.ApplyEdits(spec, nodegraph.Disconnect(fromRef, toRef, firstNonEmpty(p.Kind, p.EdgeKind)))
 
 	case "splice_node":
-		return applySpliceNode(spec, p, reg)
+		return applySpliceNode(spec, p, reg, backend)
 
 	case "put_group":
 		groupID := p.ID
@@ -366,7 +372,7 @@ func applySinglePatch(spec *nodegraph.Spec, p PatchOp, reg *nodegraph.Registry, 
 	}
 }
 
-func applySpliceNode(spec *nodegraph.Spec, p PatchOp, reg *nodegraph.Registry) (*nodegraph.Spec, error) {
+func applySpliceNode(spec *nodegraph.Spec, p PatchOp, reg *nodegraph.Registry, backend *nodegraph.BackendProfile) (*nodegraph.Spec, error) {
 	id := firstNonEmpty(p.ID, p.Node)
 	tid, err := nodegraph.ParseTypeID(p.Type)
 	if err != nil {
@@ -396,7 +402,7 @@ func applySpliceNode(spec *nodegraph.Spec, p PatchOp, reg *nodegraph.Registry) (
 	outletName := strings.TrimSpace(p.Outlet)
 	if (inletName == "" || outletName == "") && reg != nil {
 		if def, ok := reg.Lookup(tid); ok {
-			inletName, outletName = inferSplicePorts(spec, reg, def, fromRef, toRef, inletName, outletName)
+			inletName, outletName = inferSplicePorts(spec, reg, def, fromRef, toRef, inletName, outletName, backend)
 		}
 	}
 	if inletName == "" || outletName == "" {
@@ -444,6 +450,7 @@ func inferSplicePorts(
 	spliceDef nodegraph.TypeDef,
 	fromRef, toRef nodegraph.PortRef,
 	inletName, outletName string,
+	backend *nodegraph.BackendProfile,
 ) (string, string) {
 	var srcOutType *nodegraph.DataType
 	if srcNode, ok := spec.Nodes[fromRef.Node]; ok {
@@ -470,7 +477,7 @@ func inferSplicePorts(
 				inletName = in.Name
 				break
 			}
-			compat, _, _ := nodegraph.CheckCompatibility(*srcOutType, in.Type)
+			compat, _, _ := backend.CheckCompatibility(*srcOutType, in.Type)
 			if compat != nodegraph.CompatIncompatible {
 				inletName = in.Name
 				break
@@ -483,7 +490,7 @@ func inferSplicePorts(
 				outletName = out.Name
 				break
 			}
-			compat, _, _ := nodegraph.CheckCompatibility(out.Type, *dstInType)
+			compat, _, _ := backend.CheckCompatibility(out.Type, *dstInType)
 			if compat != nodegraph.CompatIncompatible {
 				outletName = out.Name
 				break

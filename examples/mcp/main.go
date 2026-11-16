@@ -99,6 +99,7 @@ var scriptedMCPSteps = []mcpStep{
 }
 
 type mcpDemo struct {
+	revision   uint64
 	env        *catalog.Environment
 	store      *ngmcp.MemoryStore
 	server     *ngmcp.Server
@@ -147,12 +148,14 @@ func newMCPDemo(initialMode editor.RenderMode) *mcpDemo {
 		},
 	})
 
+	_, revision, _ := store.Get(context.Background(), initial.Name)
 	m := &mcpDemo{
-		env:    env,
-		store:  store,
-		server: srv,
-		width:  116,
-		height: 30,
+		revision: revision,
+		env:      env,
+		store:    store,
+		server:   srv,
+		width:    116,
+		height:   30,
 		mcpLog: []string{
 			"Ready: press p (or click 'MCP Patch') to apply JSON-RPC 2.0 edits via ngmcp.",
 		},
@@ -167,9 +170,11 @@ func newMCPDemo(initialMode editor.RenderMode) *mcpDemo {
 		Width:               max(24, leftW),
 		Height:              m.height,
 		Commit: func(next *ntnodegraph.Spec, diff ntnodegraph.SpecDiff) error {
-			if _, err := store.Put(context.Background(), initial.Name, next, diff, ngmcp.PutOptions{Create: true}); err != nil {
+			res, err := store.Put(context.Background(), initial.Name, next, diff, ngmcp.PutOptions{ExpectedRevision: m.revision})
+			if err != nil {
 				return err
 			}
+			m.revision = res.Revision
 			m.appendLog(fmt.Sprintf("canvas -> store.Put(%s): +%dn -%dn ~%dp",
 				initial.Name, len(diff.AddedNodes), len(diff.RemovedNodes), len(diff.ModifiedNodes)))
 			return nil
@@ -217,7 +222,12 @@ func (m *mcpDemo) runNextMCPStep() tea.Cmd {
 	if m.stepIdx >= len(scriptedMCPSteps) {
 		// Reset back to initial spec so the user can replay endlessly.
 		initial := catalog.MCPSpec()
-		_, _ = m.store.Put(context.Background(), initial.Name, initial, ntnodegraph.SpecDiff{}, ngmcp.PutOptions{Create: true})
+		res, err := m.store.Put(context.Background(), initial.Name, initial, ntnodegraph.SpecDiff{}, ngmcp.PutOptions{ExpectedRevision: m.revision})
+		if err != nil {
+			m.appendLog(err.Error())
+			return nil
+		}
+		m.revision = res.Revision
 		m.stepIdx = 0
 		m.yamlScroll = 0
 		m.appendLog("reset -> restored initial hn-editorial-desk spec")
@@ -255,10 +265,11 @@ func (m *mcpDemo) runNextMCPStep() tea.Cmd {
 	}
 	m.appendLog(fmt.Sprintf("[%s] #%d %s", status, m.stepIdx, step.title))
 
-	updated, getErr := m.store.Get(context.Background(), "hn-editorial-desk")
+	updated, revision, getErr := m.store.Get(context.Background(), "hn-editorial-desk")
 	if getErr != nil {
 		return nil
 	}
+	m.revision = revision
 	cmd := m.ed.SetSpec(updated)
 	m.ed.FitToView()
 	return cmd

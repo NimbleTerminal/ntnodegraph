@@ -116,3 +116,17 @@ func TestJSONSchemaV1Compliance(t *testing.T) {
 		}
 	}
 }
+
+func TestOpaqueTypeSchemaMatchesParser(t *testing.T) {
+	sch := compileSpecSchema(t)
+	for _, name := range []string{"audio/pcm", "finance/order.v2", "audio/a..b", "audio/pcm<stereo>", "audio/", "audio/a/b"} {
+		_, parseErr := ParseDataType(name)
+		doc := map[string]any{
+			"version": 1, "name": "opaque", "nodes": map[string]any{}, "edges": []any{},
+			"inlets": []any{map[string]any{"name": "in", "type": name, "target": "node.in"}},
+		}
+		if err := sch.Validate(doc); (err == nil) != (parseErr == nil) {
+			t.Errorf("%q: schema=%v parser=%v", name, err, parseErr)
+		}
+	}
+}

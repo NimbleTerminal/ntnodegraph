@@ -358,6 +358,8 @@ type InlineParamRow struct {
 // SceneOptions configures layout, expanded inline drawers, and live previews
 // when building a Scene.
 type SceneOptions struct {
+	// Backend supplies the same compatibility policy used to validate edits.
+	Backend         *nodegraph.BackendProfile
 	Layout          LayoutOptions
 	ParamsExpanded  map[string]bool
 	PreviewExpanded map[string]bool
@@ -773,7 +775,7 @@ func BuildSceneWithOptions(
 				Required:    in.Required,
 				IsOutlet:    false,
 				Connected:   inletConnected[ref],
-				CompatState: evalDragCompat(drag, id, in.Type, false),
+				CompatState: evalDragCompat(drag, id, in.Type, false, sceneOpts.Backend),
 				Center:      Point{X: pos.X, Y: py},
 			})
 		}
@@ -791,7 +793,7 @@ func BuildSceneWithOptions(
 				Required:    out.Required,
 				IsOutlet:    true,
 				Connected:   outletConnected[ref],
-				CompatState: evalDragCompat(drag, id, out.Type, true),
+				CompatState: evalDragCompat(drag, id, out.Type, true, sceneOpts.Backend),
 				Center:      Point{X: pos.X + cardW, Y: py},
 			})
 		}
@@ -903,7 +905,7 @@ func BuildSceneWithOptions(
 			continue
 		}
 
-		compat, coerce, _ := nodegraph.CheckCompatibility(fromAnchor.Type, toAnchor.Type)
+		compat, coerce, _ := sceneOpts.Backend.CheckCompatibility(fromAnchor.Type, toAnchor.Type)
 		c1, c2 := bezierControls(fromAnchor.Center, toAnchor.Center)
 		isSelected := sel.Edge != nil && *sel.Edge == edge
 
@@ -2262,7 +2264,7 @@ func formatParamSummaries(nspec nodegraph.NodeSpec, def nodegraph.TypeDef) []str
 	return out
 }
 
-func evalDragCompat(drag *WireDragPreview, nodeID string, portType nodegraph.DataType, isOutlet bool) PortCompatState {
+func evalDragCompat(drag *WireDragPreview, nodeID string, portType nodegraph.DataType, isOutlet bool, backend *nodegraph.BackendProfile) PortCompatState {
 	if drag == nil || !drag.Active {
 		return PortCompatNeutral
 	}
@@ -2275,7 +2277,7 @@ func evalDragCompat(drag *WireDragPreview, nodeID string, portType nodegraph.Dat
 	} else {
 		outType, inType = portType, drag.AnchorType
 	}
-	compat, _, err := nodegraph.CheckCompatibility(outType, inType)
+	compat, _, err := backend.CheckCompatibility(outType, inType)
 	if err != nil || compat == nodegraph.CompatIncompatible {
 		return PortCompatInvalid
 	}

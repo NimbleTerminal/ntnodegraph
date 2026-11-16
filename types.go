@@ -299,14 +299,15 @@ const (
 	BaseAny      BaseType = "any"
 )
 
-// Valid reports whether b is a known BaseType.
+// Valid reports whether b is a standard base type or a namespaced opaque type.
 func (b BaseType) Valid() bool {
 	switch b {
 	case BaseBytes, BaseString, BaseNumber, BaseBool, BaseJSON,
 		BaseTable, BaseDocument, BaseFrame, BaseTexture, BaseScene, BaseEvent, BaseAny:
 		return true
 	default:
-		return false
+		ns, name, ok := strings.Cut(string(b), "/")
+		return ok && isValidNamespace(ns) && isValidTypeName(name)
 	}
 }
 
@@ -512,6 +513,9 @@ func CheckCompatibility(out, in DataType) (Compatibility, CoercionKind, error) {
 	}
 	if out.Base == in.Base && out.Param != "" && in.Param == "" {
 		return CompatWildcard, CoerceNone, nil
+	}
+	if strings.ContainsRune(string(out.Base), '/') || strings.ContainsRune(string(in.Base), '/') {
+		return ExactCompatibility(out, in)
 	}
 	if in.Base == BaseEvent && in.Param == "" {
 		return CompatCoerce, CoerceEventTrigger, nil

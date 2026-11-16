@@ -25,13 +25,10 @@ type ToolHandler func(ctx context.Context, rawArgs json.RawMessage) (CallToolRes
 // ResourceHandler resolves a registered MCP resource URI.
 type ResourceHandler func(ctx context.Context, uri string) (ReadResourceResult, error)
 
-// TypeAnnotation supplies optional host-specific metadata for a registered
-// TypeDef (such as hot/cold inlet semantics or frame-bound scheduling hints)
-// without coupling internal/nodegraph to runtime execution concepts.
-type TypeAnnotation struct {
-	FrameBound bool            `json:"frame_bound,omitempty"`
-	HotInlets  map[string]bool `json:"-"`
-}
+// TypeAnnotation contains host-owned metadata keyed by namespace (for example
+// "example.org/runtime"). Values must be JSON-serializable. The server treats
+// this metadata as opaque and assigns it no execution semantics.
+type TypeAnnotation map[string]any
 
 // TypeAnnotator optionally enriches "list" output with host-level port metadata.
 type TypeAnnotator func(id nodegraph.TypeID) (TypeAnnotation, bool)
@@ -447,7 +444,6 @@ type portSummary struct {
 	Name        string `json:"name"`
 	Type        string `json:"type"`
 	Required    bool   `json:"required,omitempty"`
-	Hot         *bool  `json:"hot,omitempty"`
 	Description string `json:"description,omitempty"`
 }
 
@@ -457,7 +453,7 @@ type nodeTypeSummary struct {
 	Subgraph        bool                       `json:"subgraph,omitempty"`
 	ComponentOrigin string                     `json:"component_origin,omitempty"`
 	Description     string                     `json:"description,omitempty"`
-	FrameBound      bool                       `json:"frame_bound,omitempty"`
+	Annotations     TypeAnnotation             `json:"annotations,omitempty"`
 	Inlets          []portSummary              `json:"inlets,omitempty"`
 	Outlets         []portSummary              `json:"outlets,omitempty"`
 	Params          []nodegraph.ParamDef       `json:"params,omitempty"`
@@ -688,9 +684,10 @@ func (s *Server) handleList(ctx context.Context, rawArgs json.RawMessage) (CallT
 		}
 
 		var ann TypeAnnotation
-		hasAnn := false
 		if s.annotateType != nil {
-			ann, hasAnn = s.annotateType(td.ID)
+			if value, ok := s.annotateType(td.ID); ok {
+				ann = value
+			}
 		}
 
 		inlets := make([]portSummary, len(td.Inlets))
@@ -700,10 +697,6 @@ func (s *Server) handleList(ctx context.Context, rawArgs json.RawMessage) (CallT
 				Type:        in.Type.String(),
 				Required:    in.Required,
 				Description: in.Description,
-			}
-			if hasAnn && ann.HotInlets != nil {
-				hot := ann.HotInlets[in.Name]
-				ps.Hot = &hot
 			}
 			inlets[i] = ps
 		}
@@ -731,7 +724,7 @@ func (s *Server) handleList(ctx context.Context, rawArgs json.RawMessage) (CallT
 			Subgraph:        isSubgraph,
 			ComponentOrigin: compOrigin,
 			Description:     td.Description,
-			FrameBound:      ann.FrameBound,
+			Annotations:     ann,
 			Inlets:          inlets,
 			Outlets:         outlets,
 			Params:          td.Params,
@@ -772,7 +765,7 @@ func (s *Server) resolveSpecInput(ctx context.Context, target, inlineSpec string
 	if effTarget == "" {
 		effTarget = s.store.DefaultTarget()
 	}
-	sp, err := s.store.Get(ctx, effTarget)
+	sp, _, err := s.store.Get(ctx, effTarget)
 	if err != nil {
 		return nil, effTarget, err
 	}
@@ -881,7 +874,7 @@ func (s *Server) handleEdit(ctx context.Context, rawArgs json.RawMessage) (CallT
 		return ErrorResult(ErrTargetRequired, nil), nil
 	}
 
-	before, getErr := s.store.Get(ctx, effTarget)
+	before, revision, getErr := s.store.Get(ctx, effTarget)
 	if getErr != nil {
 		if !args.Create || !errors.Is(getErr, ErrGraphNotFound) {
 			return ErrorResult(getErr, nil), nil
@@ -905,7 +898,7 @@ func (s *Server) handleEdit(ctx context.Context, rawArgs json.RawMessage) (CallT
 		})
 	}
 
-	after, patchErr := ApplyPatchOps(before, ops, s.registry, s.autoLayout)
+	after, patchErr := ApplyPatchOpsWithBackend(before, ops, s.registry, s.autoLayout, s.backend)
 	if patchErr != nil {
 		return ErrorResult(patchErr, nil), nil
 	}
@@ -923,8 +916,9 @@ func (s *Server) handleEdit(ctx context.Context, rawArgs json.RawMessage) (CallT
 
 	diff := nodegraph.Diff(before, after)
 	putRes, putErr := s.store.Put(ctx, effTarget, after, diff, PutOptions{
-		Create: args.Create,
-		Save:   args.Save,
+		Create:           args.Create,
+		ExpectedRevision: revision,
+		Save:             args.Save,
 	})
 	if putErr != nil {
 		return ErrorResult(putErr, map[string]any{
@@ -941,6 +935,7 @@ func (s *Server) handleEdit(ctx context.Context, rawArgs json.RawMessage) (CallT
 	out := map[string]any{
 		"target":          firstNonEmpty(putRes.Target, effTarget),
 		"saved":           putRes.Saved,
+		"revision":        putRes.Revision,
 		"valid":           valErr == nil,
 		"runtime_changes": diff.HasRuntimeChanges(),
 		"diff":            diff,

@@ -243,13 +243,16 @@ func cloneTypeDef(d TypeDef) TypeDef {
 // BackendProfile announces what a particular runtime backend (such as Nebula)
 // supports when validating a Spec.
 type BackendProfile struct {
-	Name                   string   `json:"name"`
-	EdgeKinds              []string `json:"edge_kinds,omitempty"`
-	DefaultEdgeKind        string   `json:"default_edge_kind,omitempty"`
-	AllowCycles            bool     `json:"allow_cycles,omitempty"`
-	CycleBreakingEdgeKinds []string `json:"cycle_breaking_edge_kinds,omitempty"`
-	Namespaces             []string `json:"namespaces,omitempty"`
-	Capabilities           []string `json:"capabilities,omitempty"`
+	// Compatibility overrides the standard conversion policy. Nil retains the
+	// standard policy for existing hosts; use ExactCompatibility to disable conversions.
+	Compatibility          CompatibilityPolicy `json:"-"`
+	Name                   string              `json:"name"`
+	EdgeKinds              []string            `json:"edge_kinds,omitempty"`
+	DefaultEdgeKind        string              `json:"default_edge_kind,omitempty"`
+	AllowCycles            bool                `json:"allow_cycles,omitempty"`
+	CycleBreakingEdgeKinds []string            `json:"cycle_breaking_edge_kinds,omitempty"`
+	Namespaces             []string            `json:"namespaces,omitempty"`
+	Capabilities           []string            `json:"capabilities,omitempty"`
 
 	// CycleBreakingEdge optionally reports whether a resolved edge breaks
 	// instantaneous evaluation cycles on this backend (for example, an edge
@@ -398,4 +401,39 @@ func (r *Registry) CatalogJSON() ([]byte, error) {
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+// CompatibilityPolicy resolves static wiring without performing a conversion.
+// Policies must be deterministic and safe for concurrent use.
+type CompatibilityPolicy func(out, in DataType) (Compatibility, CoercionKind, error)
+
+// ExactCompatibility accepts identical valid types only.
+func ExactCompatibility(out, in DataType) (Compatibility, CoercionKind, error) {
+	if !out.Valid() || !in.Valid() {
+		return CompatIncompatible, CoerceNone, ErrInvalidDataType
+	}
+	if out == in {
+		return CompatExact, CoerceNone, nil
+	}
+	return CompatIncompatible, CoerceNone, fmt.Errorf("%w: %s -> %s", ErrTypeMismatch, out, in)
+}
+
+// CheckCompatibility applies the host policy, or the standard policy for a nil
+// profile or unset policy. Invalid types and inconsistent policy results fail closed.
+func (b *BackendProfile) CheckCompatibility(out, in DataType) (Compatibility, CoercionKind, error) {
+	if !out.Valid() || !in.Valid() {
+		return CompatIncompatible, CoerceNone, ErrInvalidDataType
+	}
+	policy := CheckCompatibility
+	if b != nil && b.Compatibility != nil {
+		policy = b.Compatibility
+	}
+	c, conversion, err := policy(out, in)
+	if err != nil {
+		return CompatIncompatible, CoerceNone, err
+	}
+	if (c != CompatExact && c != CompatWildcard && c != CompatCoerce) || (c == CompatCoerce && conversion == CoerceNone) || (c != CompatCoerce && conversion != CoerceNone) {
+		return CompatIncompatible, CoerceNone, fmt.Errorf("%w: invalid compatibility policy result for %s -> %s", ErrTypeMismatch, out, in)
+	}
+	return c, conversion, nil
 }

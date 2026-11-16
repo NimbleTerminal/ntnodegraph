@@ -174,6 +174,36 @@ srv := ngmcp.NewServer(ngmcp.Options{
    unknown fields, YAML aliases, and duplicate JSON keys; `MarshalYAML` and
    `MarshalJSON` emit byte-for-byte deterministic output for clean Git diffs.
 
+## Host integration contracts
+
+Component boundary ports must exactly match their internal target types. Put
+conversions on ordinary edges or in explicit host conversion nodes; flattening
+removes boundary ports and must preserve their meaning.
+
+Port types can also be opaque namespaced identifiers, such as `audio/pcm` or
+`finance/order.v2`. These support identity matching and widening to `any` under
+the standard policy, without implicit conversions. Hosts can set
+`BackendProfile.Compatibility` to `ntnodegraph.ExactCompatibility` or their own
+deterministic `CompatibilityPolicy`. A nil policy retains the standard built-in
+conversions for compatibility. The same profile must be supplied to validation,
+flattening, the editor, and MCP. Standalone callers of `BuildSceneWithOptions`
+and `ApplyPatchOpsWithBackend` can supply that profile too. Policies only report
+compatibility and conversion identifiers; the host implements the conversions.
+
+`DocumentStore.Get` returns `(spec, revision, error)`. Every `Put` must provide
+`PutOptions.ExpectedRevision` from that read. The store must atomically compare
+the revision and commit, returning `ngmcp.ErrConflict` on stale writes. Revision
+zero denotes an absent document and requires `Create: true`; it never permits
+overwriting an existing document. Successful writes return the new revision in
+`PutResult`. On conflict, reload the document before deciding whether to retry
+the edit. MCP performs this comparison for both edits and component extraction.
+
+Scheduling metadata belongs to the host. `ngmcp.TypeAnnotation` is an opaque
+map keyed by host namespace, for example
+`{"example.org/runtime": {"hot_inlets": ["trigger"]}}`. MCP returns it as
+`annotations` on each type. Hosts own component scheduling analysis; the core
+does not synthesize hot-inlet or frame-bound execution hints.
+
 ## Packages
 
 | Package | Description |

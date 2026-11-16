@@ -339,7 +339,7 @@ func New(spec *nodegraph.Spec, reg *nodegraph.Registry, opts Options) *Model {
 }
 
 func (m *Model) validateOpts() nodegraph.ValidateOptions {
-	if m.profile.Name == "" {
+	if m.profile.Name == "" && m.profile.Compatibility == nil {
 		return nodegraph.ValidateOptions{}
 	}
 	p := m.profile
@@ -1529,14 +1529,14 @@ func (m *Model) SpliceNodeOnSelectedEdge(typeID nodegraph.TypeID) (string, tea.C
 
 	inPort := ""
 	for _, in := range def.Inlets {
-		if c, _, err := nodegraph.CheckCompatibility(srcAnchor.Type, in.Type); err == nil && c != nodegraph.CompatIncompatible {
+		if c, _, err := m.profile.CheckCompatibility(srcAnchor.Type, in.Type); err == nil && c != nodegraph.CompatIncompatible {
 			inPort = in.Name
 			break
 		}
 	}
 	outPort := ""
 	for _, out := range def.Outlets {
-		if c, _, err := nodegraph.CheckCompatibility(out.Type, dstAnchor.Type); err == nil && c != nodegraph.CompatIncompatible {
+		if c, _, err := m.profile.CheckCompatibility(out.Type, dstAnchor.Type); err == nil && c != nodegraph.CompatIncompatible {
 			outPort = out.Name
 			break
 		}
@@ -1841,7 +1841,7 @@ func (m *Model) PromoteGroupToSubgraph(groupID, componentName string) (nodegraph
 	}
 
 	var backendPtr *nodegraph.BackendProfile
-	if m.profile.Name != "" {
+	if m.profile.Name != "" || m.profile.Compatibility != nil {
 		p := m.profile
 		backendPtr = &p
 	}
@@ -1904,7 +1904,7 @@ func (m *Model) ExtractSelectedNodesToSubgraph(componentName string) (nodegraph.
 		compName = m.uniqueComponentName(m.sel.Nodes[0] + "-sub")
 	}
 	var backendPtr *nodegraph.BackendProfile
-	if m.profile.Name != "" {
+	if m.profile.Name != "" || m.profile.Compatibility != nil {
 		p := m.profile
 		backendPtr = &p
 	}
@@ -2417,6 +2417,7 @@ func (m *Model) renderCanvasArea(cols, rows int) string {
 
 func (m *Model) currentSceneOptions() SceneOptions {
 	return SceneOptions{
+		Backend:         &m.profile,
 		Layout:          m.layoutOpts,
 		ParamsExpanded:  m.paramsExpanded,
 		PreviewExpanded: m.previewExpanded,

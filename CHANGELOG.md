@@ -2,6 +2,23 @@
 
 All notable changes to `nimbleterminal.dev/ntnodegraph` are documented in this file.
 
+## Unreleased
+
+### Changed
+
+- **Breaking:** `DocumentStore.Get` now returns a revision; `Put` requires
+  `ExpectedRevision` and rejects stale writes with `ErrConflict`. Custom stores
+  must implement atomic compare-and-swap. The MCP demo tracks editor revisions.
+- **Breaking:** component boundary ports require exact type matches. Move
+  boundary conversions onto ordinary edges or explicit conversion nodes.
+- **Breaking:** removed `SynthesizeExecutionHints`; component scheduling analysis
+  belongs in host integrations. `ngmcp.TypeAnnotation` is now a namespaced map
+  returned as `annotations`, replacing `frame_bound` and inlet `hot` fields.
+- Added namespaced opaque port types and `BackendProfile.Compatibility`, used
+  consistently by validation, flattening, editor wiring, and MCP splice inference.
+  The default retains standard conversions; `ExactCompatibility` disables them.
+- MemoryStore chooses the lexically first initial target when no default is given.
+
 ## [0.1.0] - 2026-11-14
 
 ### Added

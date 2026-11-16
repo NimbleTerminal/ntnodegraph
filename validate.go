@@ -274,8 +274,8 @@ func Validate(spec *Spec, registry *Registry, opts ValidateOptions) (*Validation
 				addIssue(IssueUnknownPort, tPath, ErrUnknownPort, "node %q (%s) has no inlet %q", target.Node, tdef.ID, target.Port)
 				continue
 			}
-			if _, _, err := CheckCompatibility(ex.Type, pdef.Type); err != nil {
-				addIssue(IssueTypeMismatch, path+".type", ErrTypeMismatch, "exposed inlet %q (%s) cannot feed %s (%s)", ex.Name, ex.Type, target, pdef.Type)
+			if ex.Type != pdef.Type {
+				addIssue(IssueTypeMismatch, path+".type", ErrTypeMismatch, "exposed inlet %q (%s) must exactly match %s (%s); use an explicit conversion node", ex.Name, ex.Type, target, pdef.Type)
 				continue
 			}
 			inletConnected[target] = true
@@ -316,8 +316,8 @@ func Validate(spec *Spec, registry *Registry, opts ValidateOptions) (*Validation
 			addIssue(IssueUnknownPort, path+".target", ErrUnknownPort, "node %q (%s) has no outlet %q", ex.Target.Node, tdef.ID, ex.Target.Port)
 			continue
 		}
-		if _, _, err := CheckCompatibility(pdef.Type, ex.Type); err != nil {
-			addIssue(IssueTypeMismatch, path+".type", ErrTypeMismatch, "%s (%s) cannot feed exposed outlet %q (%s)", ex.Target, pdef.Type, ex.Name, ex.Type)
+		if pdef.Type != ex.Type {
+			addIssue(IssueTypeMismatch, path+".type", ErrTypeMismatch, "%s (%s) must exactly match exposed outlet %q (%s); use an explicit conversion node", ex.Target, pdef.Type, ex.Name, ex.Type)
 		}
 	}
 
@@ -484,7 +484,7 @@ func Validate(spec *Spec, registry *Registry, opts ValidateOptions) (*Validation
 
 		inletConnected[e.To] = true
 
-		compat, coercion, err := CheckCompatibility(outPort.Type, inPort.Type)
+		compat, coercion, err := opts.Backend.CheckCompatibility(outPort.Type, inPort.Type)
 		if err != nil {
 			addIssue(
 				IssueTypeMismatch,

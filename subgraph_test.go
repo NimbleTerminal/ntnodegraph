@@ -78,7 +78,7 @@ component_version: 1
 description: Nested story typesetter card.
 inlets:
   - name: body
-    type: bytes
+    type: json
     target: prep.payload
 outlets:
   - name: doc

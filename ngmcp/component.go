@@ -291,7 +291,7 @@ func (s *Server) handleComponentExtract(ctx context.Context, args componentArgs)
 		exposeRefs = append(exposeRefs, ref)
 	}
 
-	before, err := s.store.Get(ctx, effTarget)
+	before, revision, err := s.store.Get(ctx, effTarget)
 	if err != nil {
 		return ErrorResult(err, nil), nil
 	}
@@ -363,7 +363,8 @@ func (s *Server) handleComponentExtract(ctx context.Context, args componentArgs)
 		}
 		diff := nodegraph.Diff(before, nextParent)
 		putRes, putErr := s.store.Put(ctx, effTarget, nextParent, diff, PutOptions{
-			Save: args.Save,
+			Save:             args.Save,
+			ExpectedRevision: revision,
 		})
 		if putErr != nil {
 			return ErrorResult(putErr, nil), nil

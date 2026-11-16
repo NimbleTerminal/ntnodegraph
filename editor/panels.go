@@ -540,7 +540,7 @@ func (m *Model) openQuickConnect() tea.Cmd {
 			dstSpec := m.spec.Nodes[dstID]
 			dstDef, _ := lookupTypeDef(m.registry, dstSpec.Type, m.spec, dstID)
 			for _, in := range dstDef.Inlets {
-				compat, coerce, err := nodegraph.CheckCompatibility(out.Type, in.Type)
+				compat, coerce, err := m.profile.CheckCompatibility(out.Type, in.Type)
 				if err != nil || compat == nodegraph.CompatIncompatible {
 					continue
 				}

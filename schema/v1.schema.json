@@ -78,8 +78,9 @@
     },
     "dataType": {
       "type": "string",
-      "pattern": "^(bytes|string|number|bool|json|any|(table|document|frame|texture|scene|event)(<[a-z0-9]([a-z0-9_-]{0,62}[a-z0-9])?>)?)$",
-      "description": "Port static data type with optional specialization parameter."
+      "pattern": "^(bytes|string|number|bool|json|any|(table|document|frame|texture|scene|event)(<[a-z0-9]([a-z0-9_-]{0,62}[a-z0-9])?>)?|[a-z][a-z0-9_-]{0,63}/[a-z0-9]([a-z0-9._-]{0,126}[a-z0-9])?)$",
+      "not": { "pattern": "\\.\\." },
+      "description": "Standard port type with optional specialization, or a namespaced opaque type."
     },
     "paramType": {
       "type": "string",
