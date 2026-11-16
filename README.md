@@ -267,7 +267,7 @@ Contributions and feedback are welcome. Please follow our
 
 ## Release process
 
-The next release is **v0.2.0**, with breaking host integration changes described
+Release **v0.2.0** includes breaking host integration changes described
 in the [changelog](./CHANGELOG.md) and the host integration contracts above.
 The document format remains spec version 1. Go 1.26.8 remains the minimum.
 

@@ -2,7 +2,7 @@
 
 All notable changes to `nimbleterminal.dev/ntnodegraph` are documented in this file.
 
-## [0.2.0] - Unreleased
+## [0.2.0] - 2026-11-16
 
 ### Added
 
