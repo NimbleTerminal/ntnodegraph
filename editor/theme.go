@@ -109,6 +109,7 @@ func DefaultTheme() Theme {
 			nodegraph.BaseDocument: rgb(52, 211, 153),
 			nodegraph.BaseFrame:    rgb(244, 114, 182),
 			nodegraph.BaseTexture:  rgb(192, 132, 252),
+			nodegraph.BaseScene:    rgb(249, 115, 22),
 			nodegraph.BaseEvent:    rgb(250, 204, 21),
 			nodegraph.BaseAny:      rgb(148, 163, 184),
 		},

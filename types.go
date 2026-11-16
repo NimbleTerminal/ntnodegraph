@@ -294,6 +294,7 @@ const (
 	BaseDocument BaseType = "document"
 	BaseFrame    BaseType = "frame"
 	BaseTexture  BaseType = "texture"
+	BaseScene    BaseType = "scene"
 	BaseEvent    BaseType = "event"
 	BaseAny      BaseType = "any"
 )
@@ -302,7 +303,7 @@ const (
 func (b BaseType) Valid() bool {
 	switch b {
 	case BaseBytes, BaseString, BaseNumber, BaseBool, BaseJSON,
-		BaseTable, BaseDocument, BaseFrame, BaseTexture, BaseEvent, BaseAny:
+		BaseTable, BaseDocument, BaseFrame, BaseTexture, BaseScene, BaseEvent, BaseAny:
 		return true
 	default:
 		return false
@@ -310,10 +311,10 @@ func (b BaseType) Valid() bool {
 }
 
 // AllowsTypeParam reports whether b may carry a <param> specialization such as
-// frame<rgba8>, texture<rgba16f>, table<arrow>, or event<string>.
+// frame<rgba8>, texture<rgba16f>, scene<sdf>, table<arrow>, or event<string>.
 func (b BaseType) AllowsTypeParam() bool {
 	switch b {
-	case BaseTable, BaseDocument, BaseFrame, BaseTexture, BaseEvent:
+	case BaseTable, BaseDocument, BaseFrame, BaseTexture, BaseScene, BaseEvent:
 		return true
 	default:
 		return false
@@ -358,6 +359,7 @@ var (
 	TypeDocument = DataType{Base: BaseDocument}
 	TypeFrame    = DataType{Base: BaseFrame}
 	TypeTexture  = DataType{Base: BaseTexture}
+	TypeScene    = DataType{Base: BaseScene}
 	TypeEvent    = DataType{Base: BaseEvent}
 	TypeAny      = DataType{Base: BaseAny}
 )

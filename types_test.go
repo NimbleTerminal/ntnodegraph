@@ -226,3 +226,24 @@ func TestCapabilityCovers(t *testing.T) {
 		}
 	}
 }
+
+func TestSceneDataTypeCompatibility(t *testing.T) {
+	sceneAny := MustParseDataType("scene")
+	sceneSDF := MustParseDataType("scene<sdf>")
+	sceneNT3D := MustParseDataType("scene<nt3d>")
+	if sceneAny != TypeScene {
+		t.Fatalf("got %v, want TypeScene %v", sceneAny, TypeScene)
+	}
+	if compat, _, err := CheckCompatibility(sceneSDF, sceneAny); err != nil || compat != CompatWildcard {
+		t.Fatalf("scene<sdf> -> scene: got (%v, %v), want CompatWildcard", compat, err)
+	}
+	if compat, _, err := CheckCompatibility(sceneSDF, sceneSDF); err != nil || compat != CompatExact {
+		t.Fatalf("scene<sdf> -> scene<sdf>: got (%v, %v), want CompatExact", compat, err)
+	}
+	if _, _, err := CheckCompatibility(sceneAny, sceneSDF); err == nil {
+		t.Fatal("expected unparameterized scene -> scene<sdf> to be rejected")
+	}
+	if _, _, err := CheckCompatibility(sceneNT3D, sceneSDF); err == nil {
+		t.Fatal("expected scene<nt3d> -> scene<sdf> to be rejected")
+	}
+}
