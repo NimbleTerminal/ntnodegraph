@@ -233,9 +233,12 @@ tasks:
         .:FuzzParseDataType
         .:FuzzParseTypeID
         .:FuzzSubgraphFlatten
+        .:FuzzDataTypeSchemaParity
+        .:FuzzExtractFlattenIdentity
         ./editor:FuzzEditorInteractions
         ./ngmcp:FuzzHandleJSON
         ./ngmcp:FuzzDecodePatchOps
+        ./ngmcp:FuzzMemoryStoreTransactions
     env:
       CGO_ENABLED: '0'
       NTNODEGRAPH_FUZZ_DURATION: '{{.DURATION}}'

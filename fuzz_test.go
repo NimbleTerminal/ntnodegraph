@@ -90,7 +90,7 @@ func FuzzParseJSON(f *testing.F) {
 }
 
 func FuzzParseDataType(f *testing.F) {
-	for _, s := range []string{"bytes", "document", "frame<rgba8>", "texture<rgba16f>", "any", "event<string>"} {
+	for _, s := range []string{"bytes", "document", "frame<rgba8>", "texture<rgba16f>", "any", "event<string>", "audio/pcm", "finance/order.v2", "audio/a..b", "audio/pcm<stereo>"} {
 		f.Add(s)
 	}
 	f.Fuzz(func(t *testing.T, s string) {

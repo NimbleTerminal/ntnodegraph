@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -291,20 +292,50 @@ func FuzzDecodePatchOps(f *testing.F) {
 	f.Add([]byte(`[{"op":"splice_node","id":"f","type":"transform/filter@1","from":"a.out","to":"b.in"}]`))
 	f.Add([]byte(`[{"op":"set_param","node":"n1","key":"k","value":{"nested":[1,2,3]}}]`))
 	f.Add([]byte(`[{"op":"expose_inlet","name":"in","type":"any","target":"n1.in","required":true},{"op":"expose_param","name":"k","type":"string","target":"n1.k"}]`))
+	f.Add([]byte(`[{"op":"set_param","node":"n0","key":"k","value":{"nested":[1,2,3]}}]`))
+	f.Add([]byte(`[{"op":"remove_node","id":"n0"},{"op":"set_param","node":"n0","key":"k","value":1}]`))
 
 	reg := nodegraph.NewRegistry()
 	_ = reg.Register(nodegraph.TypeDef{
 		ID:     nodegraph.MustParseTypeID("surface/log@1"),
 		Inlets: []nodegraph.PortDef{{Name: "in", Type: nodegraph.DataType{Base: nodegraph.BaseAny}}},
+		Params: []nodegraph.ParamDef{{Name: "k", Type: nodegraph.ParamJSON}},
 	})
 	base, _ := nodegraph.NewSpec("fuzz")
+	base.Nodes["n0"] = nodegraph.NodeSpec{Type: nodegraph.MustParseTypeID("surface/log@1"), Params: map[string]any{"k": map[string]any{"nested": []any{int64(1)}}}}
+	base = base.Clone()
+	original := base.Clone()
 
-	f.Fuzz(func(_ *testing.T, data []byte) {
+	f.Fuzz(func(t *testing.T, data []byte) {
 		ops, err := DecodePatchOps(data, Limits{MaxMessageBytes: 32 * 1024, MaxOpsPerBatch: 32})
 		if err != nil {
 			return
 		}
-		_, _ = ApplyPatchOps(base, ops, reg, nil)
+		next, applyErr := ApplyPatchOps(base, ops, reg, nil)
+		if !reflect.DeepEqual(base, original) {
+			t.Fatal("patch mutated its input, including on failure")
+		}
+		if applyErr != nil {
+			return
+		}
+		raw, err := nodegraph.MarshalJSON(next)
+		if err != nil {
+			t.Fatalf("successful patch cannot be serialized: %v", err)
+		}
+		reparsed, err := nodegraph.ParseJSON(raw)
+		if err != nil {
+			t.Fatalf("successful patch cannot be parsed: %v", err)
+		}
+		if d := nodegraph.Diff(next, reparsed); !d.IsEmpty() {
+			t.Fatalf("patch round-trip changed document: %+v", d)
+		}
+		repeated, err := ApplyPatchOps(base, ops, reg, nil)
+		if err != nil {
+			t.Fatalf("repeated patch failed: %v", err)
+		}
+		if d := nodegraph.Diff(next, repeated); !d.IsEmpty() {
+			t.Fatalf("patch is nondeterministic: %+v", d)
+		}
 	})
 }
 

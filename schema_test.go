@@ -11,7 +11,7 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
 
-func compileSpecSchema(t *testing.T) *jsonschema.Schema {
+func compileSpecSchema(t testing.TB) *jsonschema.Schema {
 	t.Helper()
 	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(SchemaV1JSON()))
 	if err != nil {

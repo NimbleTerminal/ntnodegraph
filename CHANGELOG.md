@@ -18,6 +18,9 @@ All notable changes to `nimbleterminal.dev/ntnodegraph` are documented in this f
   consistently by validation, flattening, editor wiring, and MCP splice inference.
   The default retains standard conversions; `ExactCompatibility` disables them.
 - MemoryStore chooses the lexically first initial target when no default is given.
+- Expanded CI fuzzing to eleven targets, adding parser/schema parity, structured
+  extraction/flattening identity, and stateful revision checks. MCP patch fuzzing
+  now checks input immutability, serialization round trips, and determinism.
 
 ## [0.1.0] - 2026-11-14
 

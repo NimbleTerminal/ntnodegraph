@@ -234,16 +234,33 @@ module so browser dependencies stay outside the core library.
 Run `task ci` before submitting changes. It checks Go formatting, module
 tidiness, dependency checksums, `golangci-lint`, `go vet`, race-enabled unit
 tests, `GOOS=js GOARCH=wasm` builds and Node execution tests, headless browser
-demo smoke checks, third-party notices, and bounded fuzzing across all eight
+demo smoke checks, third-party notices, and bounded fuzzing across all eleven
 fuzz targets. It requires Go 1.26.8+, a C compiler for the race detector,
 [Task](https://taskfile.dev), and Node.js.
 
 ```sh
 task check              # vet, -race tests, js/wasm tests, site smoke checks & notices
 task lint               # golangci-lint across library and examples
-task fuzz               # 8 fuzz targets, 2s each (override with DURATION=30s)
+task fuzz               # 11 fuzz targets, 2s each (override with DURATION=30s)
 task ci                 # full CI preflight matching GitHub Actions
 ```
+
+Fuzz coverage includes bounded codecs, identifiers, parser/schema agreement,
+structured DAG extraction/flattening, editor interactions, MCP requests and
+patch transactions, and stateful document revision checks. The structured
+targets generate valid graphs and operation sequences to reach behavior beyond
+parser rejection. Each fuzz input has bounded size or graph cardinality.
+
+For a longer campaign, run `task fuzz DURATION=30s` (duration is per target).
+To focus on composition, run:
+
+```sh
+GOWORK=off CGO_ENABLED=0 go test -run='^$' -fuzz='^FuzzExtractFlattenIdentity$' -fuzztime=1m -parallel=2 .
+```
+
+Go saves minimized failing inputs under the affected package's
+`testdata/fuzz/<target>/` directory. Keep those files as regression seeds;
+ordinary `go test ./...` replays them without launching a fuzz campaign.
 
 Contributions and feedback are welcome. Please follow our
 [Code of Conduct](./CODE_OF_CONDUCT.md).
